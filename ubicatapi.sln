@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ubicatapi", "ubicatapi.csproj", "{6B341D32-9A6F-500B-241B-F58BEC8E2DCD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B341D32-9A6F-500B-241B-F58BEC8E2DCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B341D32-9A6F-500B-241B-F58BEC8E2DCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B341D32-9A6F-500B-241B-F58BEC8E2DCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B341D32-9A6F-500B-241B-F58BEC8E2DCD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {21F4C680-8EA6-4E6B-AE00-A4A181436780}
+	EndGlobalSection
+EndGlobal

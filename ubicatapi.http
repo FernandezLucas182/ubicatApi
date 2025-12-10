@@ -1,0 +1,6 @@
+@ubicatapi_HostAddress = http://localhost:5030
+
+GET {{ubicatapi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
