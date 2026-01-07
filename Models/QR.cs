@@ -15,5 +15,8 @@ namespace UbicatApi.Models
         public string ubicacionActual { get; set; }
 
         public Mascota Mascota { get; set; }
+
+        public DateTime? fechaUltimoEscaneo { get; set; }
+
     }
 }

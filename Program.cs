@@ -1,12 +1,18 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer; 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 using UbicatApi.Models;
+using UbicatApi.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controladores + evitar ciclos JSON
+var config = builder.Configuration;
+
+// =====================================================
+// 1) CONTROLADORES / JSON
+// =====================================================
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -15,11 +21,9 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var config = builder.Configuration;
-
-// =====================
-// CONFIGURAR JWT
-// =====================
+// =====================================================
+// 2) CONFIGURAR JWT
+// =====================================================
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -39,16 +43,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// =====================
-// CONFIGURAR DB CONTEXT
-// =====================
-builder.Services.AddDbContext<DataContext>(
-    options => options.UseMySql(
+// =====================================================
+// 3) CONFIGURAR ENTITY FRAMEWORK + MySQL
+// =====================================================
+builder.Services.AddDbContext<DataContext>(options =>
+    options.UseMySql(
         config["ConnectionStrings:DefaultConnection"],
         ServerVersion.AutoDetect(config["ConnectionStrings:DefaultConnection"])
     )
 );
 
+// =====================================================
+// 4) REGISTRAR SERVICIOS PERSONALIZADOS (SMTP + Cloudinary)
+// =====================================================
+builder.Services.AddScoped<EmailService>();          // Servicio de envío de emails
+builder.Services.AddScoped<LocalFileService>();
+
+
+
+// =====================================================
+// 5) BUILD & MIDDLEWARE
+// =====================================================
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -62,6 +77,9 @@ app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseStaticFiles();
+
 
 app.MapControllers();
 

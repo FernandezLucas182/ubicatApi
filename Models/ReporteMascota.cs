@@ -22,6 +22,11 @@ namespace UbicatApi.Models
 
         public string? mensaje { get; set; }
 
+        // ==================================
+        // NUEVA PROPIEDAD — FOTO DEL REPORTE
+        // ==================================
+        public string? foto { get; set; }
+
         public DateTime fecha { get; set; }
     }
 }

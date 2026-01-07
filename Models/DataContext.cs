@@ -20,6 +20,7 @@ namespace UbicatApi.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
             base.OnModelCreating(modelBuilder);
 
             // Relación QR 1:1 Mascota
