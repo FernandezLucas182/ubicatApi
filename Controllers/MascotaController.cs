@@ -20,6 +20,60 @@ namespace UbicatApi.Controllers
         }
 
         // ============================================================
+        // POST - Crear Mascota CON FOTO (multipart/form-data)
+        // ============================================================
+        [Authorize]
+        [HttpPost("crear-con-foto")]
+        public async Task<IActionResult> CrearConFoto([FromForm] MascotaCreateDto dto)
+        {
+            try
+            {
+                int idUsuario = int.Parse(User.Identity?.Name ?? "0");
+
+                string? nombreArchivo = null;
+
+                if (dto.foto != null)
+                {
+                    string carpeta = Path.Combine(Directory.GetCurrentDirectory(),
+                                                   "wwwroot/uploads/mascotas");
+
+                    if (!Directory.Exists(carpeta))
+                        Directory.CreateDirectory(carpeta);
+
+                    nombreArchivo = Guid.NewGuid().ToString() +
+                                    Path.GetExtension(dto.foto.FileName);
+
+                    string rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                    using var stream = new FileStream(rutaCompleta, FileMode.Create);
+                    await dto.foto.CopyToAsync(stream);
+                }
+
+                Mascota m = new Mascota
+                {
+                    idUsuario = idUsuario,
+                    nombre = dto.nombre,
+                    especie = dto.especie,
+                    edad = dto.edad,
+                    enfermedades = dto.enfermedades,
+                    cuidados = dto.cuidados,
+                    estado = dto.estado,
+                    foto = nombreArchivo // 👈 SOLO el nombre
+                };
+
+                context.Mascota.Add(m);
+                await context.SaveChangesAsync();
+
+                return Ok(m);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+        // ============================================================
         // POST - Registrar Mascota (con creación automática del QR)
         // ============================================================
         [Authorize]
@@ -99,10 +153,66 @@ namespace UbicatApi.Controllers
 
             var mascotas = await context.Mascota
                 .Where(x => x.idUsuario == idUsuario)
-                .Include(x => x.QR)
+                .Select(m => new
+                {
+                    m.idMascota,
+                    m.nombre,
+                    m.estado,
+                    fotoUrl = m.foto == null
+                        ? null
+                        : $"{Request.Scheme}://{Request.Host}/uploads/mascotas{m.foto}"
+                })
                 .ToListAsync();
 
             return Ok(mascotas);
+        }
+
+
+
+        // ============================================================
+        // POST - Subir / cambiar foto de perfil de mascota
+        // ============================================================
+        [Authorize]
+        [HttpPost("foto-perfil/{idMascota}")]
+        public async Task<IActionResult> SubirFotoPerfil(
+            int idMascota,
+            [FromForm] IFormFile foto)
+        {
+            int idUsuario = int.Parse(User.Identity?.Name ?? "0");
+
+            var mascota = await context.Mascota
+                .FirstOrDefaultAsync(x => x.idMascota == idMascota && x.idUsuario == idUsuario);
+
+            if (mascota == null)
+                return BadRequest("Mascota no encontrada");
+
+            if (foto == null || foto.Length == 0)
+                return BadRequest("No se envió ninguna imagen");
+
+            string carpeta = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot/uploads/mascotas"
+            );
+
+            if (!Directory.Exists(carpeta))
+                Directory.CreateDirectory(carpeta);
+
+            string nombreArchivo = Guid.NewGuid().ToString() +
+                                   Path.GetExtension(foto.FileName);
+
+            string ruta = Path.Combine(carpeta, nombreArchivo);
+
+            using var stream = new FileStream(ruta, FileMode.Create);
+            await foto.CopyToAsync(stream);
+
+            mascota.foto = nombreArchivo;
+            await context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Foto de perfil actualizada",
+                foto = nombreArchivo
+            });
         }
 
         // ============================================================

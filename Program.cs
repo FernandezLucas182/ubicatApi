@@ -8,6 +8,11 @@ using UbicatApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(5030);
+});
+
 var config = builder.Configuration;
 
 // =====================================================
