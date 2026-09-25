@@ -161,6 +161,37 @@ namespace UbicatApi.Controllers
             }
         }
 
+
+        // ============================================================
+        // PUT - Reportar Mascota Perdida
+        // ============================================================
+        [Authorize]
+        [HttpPut("reportar-perdida/{idMascota}")]
+        public async Task<IActionResult> ReportarPerdida(int idMascota)
+        {
+            int idUsuario = int.Parse(User.Identity?.Name ?? "0");
+
+            var mascota = await context.Mascota.FindAsync(idMascota);
+
+            if (mascota == null)
+                return NotFound("Mascota no encontrada.");
+
+            if (mascota.idUsuario != idUsuario)
+                return Unauthorized("No podés modificar una mascota que no es tuya.");
+
+            mascota.estado = "perdida";
+
+            await context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Mascota marcada como perdida.",
+                mascota.nombre,
+                mascota.estado
+            });
+        }
+
+
         // ============================================================
         // GET - Historial de reportes
         // ============================================================

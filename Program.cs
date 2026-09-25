@@ -63,6 +63,7 @@ builder.Services.AddDbContext<DataContext>(options =>
 // =====================================================
 builder.Services.AddScoped<EmailService>();          // Servicio de envío de emails
 builder.Services.AddScoped<LocalFileService>();
+builder.Services.AddScoped<LocalStorageService>();
 
 
 

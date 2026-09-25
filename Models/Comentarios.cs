@@ -11,5 +11,7 @@ namespace UbicatApi.Models
         public int idForo { get; set; }
         public string texto { get; set; }
         public DateTime fecha { get; set; }
+
+        
     }
 }
