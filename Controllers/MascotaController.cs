@@ -74,17 +74,20 @@ namespace UbicatApi.Controllers
 
 
         // ============================================================
-        // POST - Registrar Mascota (con creación automática del QR)
+        // POST - Registrar Mascota (con foto obligatoria + QR automático)
         // ============================================================
         [Authorize]
         [HttpPost("crear")]
-        public async Task<IActionResult> Crear([FromBody] MascotaDto dto)
+        public async Task<IActionResult> Crear([FromForm] MascotaCreateDto dto)
         {
             try
             {
                 int idUsuario = int.Parse(User.Identity?.Name ?? "0");
 
-                // Verificar mascota repetida (mismo nombre + especie + usuario)
+                // La foto es obligatoria
+                if (dto.foto == null || dto.foto.Length == 0)
+                    return BadRequest("La foto de la mascota es obligatoria.");
+
                 var existe = await context.Mascota.AnyAsync(x =>
                     x.idUsuario == idUsuario &&
                     x.nombre == dto.nombre &&
@@ -94,6 +97,29 @@ namespace UbicatApi.Controllers
                 if (existe)
                     return BadRequest("Ya registraste una mascota con ese nombre y especie.");
 
+                // Guardar foto
+                string carpeta = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot/uploads/mascotas"
+                );
+
+                if (!Directory.Exists(carpeta))
+                    Directory.CreateDirectory(carpeta);
+
+                string nombreArchivo =
+                    Guid.NewGuid().ToString() +
+                    Path.GetExtension(dto.foto.FileName);
+
+                string rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                using var stream = new FileStream(
+                    rutaCompleta,
+                    FileMode.Create
+                );
+
+                await dto.foto.CopyToAsync(stream);
+
+                // Crear mascota
                 Mascota m = new Mascota
                 {
                     idUsuario = idUsuario,
@@ -103,7 +129,7 @@ namespace UbicatApi.Controllers
                     enfermedades = dto.enfermedades,
                     cuidados = dto.cuidados,
                     estado = dto.estado,
-                    foto = dto.foto
+                    foto = nombreArchivo
                 };
 
                 context.Mascota.Add(m);
@@ -120,13 +146,11 @@ namespace UbicatApi.Controllers
                     ubicacionActual = "Sin ubicación"
                 };
 
-                // Evitar referencia circular
                 qr.Mascota = null;
 
                 context.QR.Add(qr);
                 await context.SaveChangesAsync();
 
-                // incluir QR en la respuesta
                 m.QR = qr;
 
                 return Ok(new
@@ -160,11 +184,48 @@ namespace UbicatApi.Controllers
                     m.estado,
                     fotoUrl = m.foto == null
                         ? null
-                        : $"{Request.Scheme}://{Request.Host}/uploads/mascotas{m.foto}"
+                        : $"{Request.Scheme}://{Request.Host}/uploads/mascotas/{m.foto}"
                 })
                 .ToListAsync();
 
             return Ok(mascotas);
+        }
+
+
+        // ============================================================
+        // GET - Obtener detalle de una mascota
+        // ============================================================
+        [Authorize]
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Obtener(int id)
+        {
+            int idUsuario = int.Parse(User.Identity?.Name ?? "0");
+
+            var mascota = await context.Mascota
+                .Include(x => x.QR)
+                .FirstOrDefaultAsync(x =>
+                    x.idMascota == id &&
+                    x.idUsuario == idUsuario);
+
+            if (mascota == null)
+                return NotFound("Mascota no encontrada.");
+
+            return Ok(new
+            {
+                mascota.idMascota,
+                mascota.nombre,
+                mascota.especie,
+                mascota.edad,
+                mascota.enfermedades,
+                mascota.cuidados,
+                mascota.estado,
+
+                fotoUrl = mascota.foto == null
+                    ? null
+                    : $"{Request.Scheme}://{Request.Host}/uploads/mascotas/{mascota.foto}",
+
+                qr = mascota.QR
+            });
         }
 
 
@@ -216,7 +277,7 @@ namespace UbicatApi.Controllers
         }
 
 
-        
+
 
         // ============================================================
         // PUT - Editar Mascota
@@ -240,7 +301,11 @@ namespace UbicatApi.Controllers
                 m.enfermedades = dto.enfermedades;
                 m.cuidados = dto.cuidados;
                 m.estado = dto.estado;
-                m.foto = dto.foto;
+
+                if (dto.foto != null)
+                {
+                    m.foto = dto.foto;
+                }
 
                 context.Mascota.Update(m);
                 await context.SaveChangesAsync();

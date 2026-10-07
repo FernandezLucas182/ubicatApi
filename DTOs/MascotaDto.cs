@@ -8,7 +8,7 @@ namespace UbicatApi.DTOs
         public string enfermedades { get; set; }
         public string cuidados { get; set; }
         public string estado { get; set; }
-        public string foto { get; set; }
+        public string? foto { get; set; }
        
 
         

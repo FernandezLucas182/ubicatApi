@@ -11,7 +11,7 @@ namespace UbicatApi.Models
         public int idUsuario { get; set; }
 
         [ForeignKey("idUsuario")]
-        public Usuario Usuario { get; set; }   // ← ESTA LÍNEA ES LA CLAVE
+        public Usuario? Usuario { get; set; }
 
         public string nombre { get; set; }
         public string especie { get; set; }
@@ -19,8 +19,10 @@ namespace UbicatApi.Models
         public string enfermedades { get; set; }
         public string cuidados { get; set; }
         public string estado { get; set; }
-        public string foto { get; set; }
 
-        public QR QR { get; set; }
+        // Puede no tener foto todavía
+        public string? foto { get; set; }
+
+        public QR? QR { get; set; }
     }
 }
