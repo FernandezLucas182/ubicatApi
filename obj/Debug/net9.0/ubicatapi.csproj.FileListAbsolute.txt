@@ -131,3 +131,12 @@ C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\refint\ubicata
 C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\ubicatapi.pdb
 C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\ubicatapi.genruntimeconfig.cache
 C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\ref\ubicatapi.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\ubicatapi.RazorAssemblyInfo.cache
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\obj\Debug\net9.0\ubicatapi.RazorAssemblyInfo.cs
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\BouncyCastle.Cryptography.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\MailKit.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\Microsoft.Bcl.Cryptography.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\MimeKit.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\System.Formats.Asn1.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\System.Security.Cryptography.Pkcs.dll
+C:\Users\Win10\Desktop\Laboratorio III\ubicatapi\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Security.Cryptography.Pkcs.dll

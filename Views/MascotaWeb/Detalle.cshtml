@@ -1,0 +1,324 @@
+
+@model UbicatApi.Models.QR
+
+@{
+    ViewData["Title"] = "Ubicat - Mascota";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ubicat - Encontré una mascota</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            color: #1e293b;
+            font-family: Arial, sans-serif;
+        }
+
+        .contenedor {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .marca {
+            text-align: center;
+            color: #0f766e;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 23px;
+            margin-bottom: 20px;
+        }
+
+        .foto-mascota {
+            display: block;
+            width: 100%;
+            max-height: 280px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+
+        .dato {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin: 16px 0 6px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            margin-top: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #0f766e;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .secundario {
+            background: #334155;
+        }
+
+        .ayuda {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        #resultado {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .exito {
+            display: block !important;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .error {
+            display: block !important;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="contenedor">
+        <div class="marca">UBICAT</div>
+        <p class="ayuda" style="text-align:center">
+            Ayudanos a reunir a las mascotas con sus familias.
+        </p>
+
+        <h1>@Model.Mascota.nombre</h1>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Mascota.foto))
+        {
+            <img
+                class="foto-mascota"
+                src="@Url.Content("~/uploads/mascotas/" + Model.Mascota.foto)"
+                alt="Foto de @Model.Mascota.nombre" />
+        }
+
+        <div class="dato">
+            <strong>Especie:</strong> @Model.Mascota.especie
+        </div>
+
+        <div class="dato">
+            <strong>Estado:</strong> @Model.Mascota.estado
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Mascota.cuidados))
+        {
+            <div class="dato">
+                <strong>Cuidados:</strong> @Model.Mascota.cuidados
+            </div>
+        }
+
+        <hr style="border:0;border-top:1px solid #e2e8f0;margin:22px 0" />
+
+        <h2>¿Encontraste o viste a esta mascota?</h2>
+        <p class="ayuda">
+            Completá los datos para que podamos informar a su responsable.
+        </p>
+
+        <form id="formularioReporte">
+            <label for="ubicacion">¿Dónde la viste? *</label>
+            <textarea
+                id="ubicacion"
+                name="ubicacion"
+                placeholder="Escribí la dirección, barrio o lugar..."
+                required></textarea>
+
+            <button type="button" id="btnUbicacion" class="secundario">
+                Usar mi ubicación GPS
+            </button>
+
+            <p class="ayuda" id="estadoGPS">
+                También podés ingresar la ubicación manualmente.
+            </p>
+
+            <label for="mensaje">Comentario</label>
+            <textarea
+                id="mensaje"
+                name="mensaje"
+                placeholder="Contanos cómo estaba la mascota o dónde la viste."></textarea>
+
+            <label for="foto">Foto de la mascota (opcional)</label>
+            <input
+                type="file"
+                id="foto"
+                name="foto"
+                accept="image/*"
+                capture="environment" />
+
+            <label for="telefonoReportante">Tu teléfono (opcional)</label>
+            <input
+                type="tel"
+                id="telefonoReportante"
+                name="telefonoReportante"
+                placeholder="Ej.: 266 1234567" />
+
+            <label for="emailReportante">Tu email (opcional)</label>
+            <input
+                type="email"
+                id="emailReportante"
+                name="emailReportante"
+                placeholder="tucorreo@ejemplo.com" />
+
+            <button type="submit" id="btnEnviar">
+                Enviar aviso
+            </button>
+        </form>
+
+        <div id="resultado" role="status" aria-live="polite"></div>
+    </main>
+
+    <script>
+        const codigoQR = @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(Model.codigo)
+        );
+
+        const formulario = document.getElementById("formularioReporte");
+        const campoUbicacion = document.getElementById("ubicacion");
+        const estadoGPS = document.getElementById("estadoGPS");
+        const resultado = document.getElementById("resultado");
+        const btnEnviar = document.getElementById("btnEnviar");
+
+        document.getElementById("btnUbicacion").addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                estadoGPS.textContent =
+                    "Tu navegador no permite obtener la ubicación GPS.";
+                return;
+            }
+
+            estadoGPS.textContent = "Obteniendo ubicación...";
+
+            navigator.geolocation.getCurrentPosition(
+                (posicion) => {
+                    const latitud = posicion.coords.latitude;
+                    const longitud = posicion.coords.longitude;
+                    const coordenadas =
+                        `GPS: ${latitud}, ${longitud}`;
+
+                    if (campoUbicacion.value.trim()) {
+                        campoUbicacion.value += "\n" + coordenadas;
+                    } else {
+                        campoUbicacion.value = coordenadas;
+                    }
+
+                    estadoGPS.textContent =
+                        "Ubicación GPS agregada. Podés sumar una dirección o referencia.";
+                },
+                () => {
+                    estadoGPS.textContent =
+                        "No pudimos obtener tu ubicación. Ingresala manualmente.";
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+
+        formulario.addEventListener("submit", async (evento) => {
+            evento.preventDefault();
+
+            resultado.className = "";
+            resultado.style.display = "none";
+
+            if (!campoUbicacion.value.trim()) {
+                resultado.textContent =
+                    "Ingresá la ubicación antes de enviar el aviso.";
+                resultado.className = "error";
+                return;
+            }
+
+            const datos = new FormData(formulario);
+
+            btnEnviar.disabled = true;
+            btnEnviar.textContent = "Enviando aviso...";
+
+            try {
+                const respuesta = await fetch(
+                    `/api/QR/reportar-vista/${encodeURIComponent(codigoQR)}`,
+                    {
+                        method: "POST",
+                        body: datos
+                    }
+                );
+
+                const contenido = await respuesta.json();
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        contenido.mensaje ||
+                        contenido.message ||
+                        "No se pudo enviar el aviso."
+                    );
+                }
+
+                resultado.textContent =
+                    contenido.mensaje ||
+                    contenido.message ||
+                    "¡Aviso enviado! Gracias por ayudar a esta mascota.";
+
+                resultado.className = "exito";
+                formulario.reset();
+            } catch (error) {
+                resultado.textContent =
+                    error.message ||
+                    "Ocurrió un error al enviar el aviso. Intentá nuevamente.";
+                resultado.className = "error";
+            } finally {
+                btnEnviar.disabled = false;
+                btnEnviar.textContent = "Enviar aviso";
+            }
+        });
+    </script>
+</body>
+</html>

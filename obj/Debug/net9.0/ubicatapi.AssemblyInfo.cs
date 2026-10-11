@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("0a9e187a-1d55-4f18-99bb-f2cfc0f6cb98")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7db1cfe6de388da61d5c72b59155f935bd5c1756")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e123019d5b74ebe3da035ca71b173d0050bf6c5f")]
 [assembly: System.Reflection.AssemblyProductAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

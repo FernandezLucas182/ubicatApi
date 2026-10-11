@@ -102,18 +102,17 @@ namespace UbicatApi.Controllers
                 var mascota = await context.Mascota.FindAsync(qr.idMascota);
                 if (mascota == null) return NotFound("Mascota no encontrada.");
 
-                // ------------------------------
-                // SUBIR FOTO A CLOUDINARY
+                // SUBIR FOTO
                 string? fotoUrl = null;
+
                 if (dto.foto != null)
                     fotoUrl = await storage.GuardarImagen(dto.foto);
 
-                // ------------------------------
-
-                // Actualizar ubicación en QR
+                // ACTUALIZAR QR
                 qr.ubicacionActual = dto.ubicacion;
+                qr.fechaUltimoEscaneo = DateTime.Now;
 
-                // Guardar historial
+                // GUARDAR HISTORIAL
                 context.ReporteMascota.Add(new ReporteMascota
                 {
                     idMascota = mascota.idMascota,
@@ -122,34 +121,50 @@ namespace UbicatApi.Controllers
                     ubicacion = dto.ubicacion,
                     mensaje = dto.mensaje,
                     fecha = DateTime.Now,
-                    foto = fotoUrl
+                    foto = fotoUrl,
+                    emailReportante = dto.emailReportante,
+                    telefonoReportante = dto.telefonoReportante
                 });
 
                 await context.SaveChangesAsync();
 
-                // Enviar email al dueño
+                // BUSCAR AL DUEÑO
                 var dueño = await context.Usuario.FindAsync(mascota.idUsuario);
 
                 if (dueño != null && !string.IsNullOrEmpty(dueño.email))
                 {
+                    // CONSTRUIR URL COMPLETA DE LA FOTO
+                    string? fotoUrlCompleta = null;
+
+                    if (!string.IsNullOrWhiteSpace(fotoUrl))
+                    {
+                        fotoUrlCompleta =
+                            $"{Request.Scheme}://{Request.Host}{fotoUrl}";
+                    }
+
+                    // ARMAR EMAIL
                     string cuerpo =
                         $"Hola {dueño.nombre},\n\n" +
-                        $"Alguien vio a tu mascota **{mascota.nombre}**.\n\n" +
+                        $"Alguien vio a tu mascota {mascota.nombre}.\n\n" +
                         $"Ubicación: {dto.ubicacion}\n" +
                         $"Mensaje: {dto.mensaje}\n\n" +
                         $"Contacto:\n" +
                         $"- Teléfono: {dto.telefonoReportante}\n" +
                         $"- Email: {dto.emailReportante}\n\n" +
-                        $"Foto: {(fotoUrl ?? "No enviada")}\n\n" +
+                        $"Foto: {(fotoUrlCompleta ?? "No se adjuntó foto")}\n\n" +
                         $"Fecha/hora: {DateTime.Now}\n\n" +
                         $"— Equipo Ubicat";
 
-                    await emailService.EnviarEmail(dueño.email, $"Vieron a tu mascota {mascota.nombre}", cuerpo);
+                    await emailService.EnviarEmail(
+                        dueño.email,
+                        $"Vieron a tu mascota {mascota.nombre}",
+                        cuerpo
+                    );
                 }
 
                 return Ok(new
                 {
-                    mensaje = "Reporte registrado con foto. El dueño fue notificado.",
+                    mensaje = "Reporte registrado. Se intentó notificar al dueño.",
                     mascota = mascota.nombre,
                     ubicacion = dto.ubicacion,
                     foto = fotoUrl
@@ -157,7 +172,11 @@ namespace UbicatApi.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { mensaje = ex.Message, inner = ex.InnerException?.Message });
+                return BadRequest(new
+                {
+                    mensaje = ex.Message,
+                    inner = ex.InnerException?.Message
+                });
             }
         }
 

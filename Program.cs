@@ -18,11 +18,10 @@ var config = builder.Configuration;
 // =====================================================
 // 1) CONTROLADORES / JSON
 // =====================================================
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllersWithViews().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -84,10 +83,13 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseStaticFiles();
-
-
 app.MapControllers();
+
+// Página web pública de una mascota identificada por QR
+app.MapControllerRoute(
+    name: "mascota-web",
+    pattern: "mascota/{codigoQR}",
+    defaults: new { controller = "MascotaWeb", action = "Detalle" }
+);
 
 app.Run();

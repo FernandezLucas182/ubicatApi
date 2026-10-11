@@ -28,5 +28,10 @@ namespace UbicatApi.Models
         public string? foto { get; set; }
 
         public DateTime fecha { get; set; }
+
+        //DATOS DEL REPORTANTE
+        public string? emailReportante { get; set; }
+
+        public string? telefonoReportante { get; set; }
     }
 }
