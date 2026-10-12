@@ -16,5 +16,6 @@ namespace UbicatApi.Models
         public string? especialidad { get; set; }
         public string password { get; set; }
         public decimal clasificacionPromedio { get; set; }
+        public string? fotoPerfil { get; set; }
     }
 }
