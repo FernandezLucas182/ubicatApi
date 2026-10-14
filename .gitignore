@@ -50,3 +50,8 @@ appsettings.*.json
 # DotNet tools
 *.pidb
 *.svclog
+
+
+# Archivos generados por la compilación .NET
+bin/
+obj/
