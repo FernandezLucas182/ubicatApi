@@ -91,13 +91,17 @@ namespace UbicatApi.Controllers
         // ====================================
         // 3. EDITAR PERFIL
         // ====================================
+
         [Authorize]
         [HttpPut("edit")]
-        public async Task<IActionResult> EditProfile([FromBody] UsuarioDto dto)
+        public async Task<IActionResult> EditProfile(
+            [FromBody] UsuarioEditarPerfilDto dto)
         {
             try
             {
-                int id = int.Parse(User.Identity?.Name ?? "0");
+                if (!int.TryParse(User.Identity?.Name, out int id))
+                    return Unauthorized();
+
                 var u = await context.Usuario.FindAsync(id);
 
                 if (u == null)
@@ -109,16 +113,20 @@ namespace UbicatApi.Controllers
                 u.email = dto.email;
                 u.ubicacion = dto.ubicacion;
 
-                context.Usuario.Update(u);
                 await context.SaveChangesAsync();
 
-                return Ok(new { mensaje = "Perfil actualizado correctamente", u });
+                return Ok(new
+                {
+                    mensaje = "Perfil actualizado correctamente",
+                    u
+                });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
+
 
         // ====================================
         // 4. CAMBIAR PASSWORD
@@ -364,6 +372,115 @@ namespace UbicatApi.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+
+        // ====================================
+        // 7. ACTUALIZAR FOTO DE PERFIL
+        // ====================================
+        [Authorize]
+        [HttpPut("profile/foto")]
+        public async Task<IActionResult> ActualizarFotoPerfil(
+            [FromForm] IFormFile? fotoPerfil)
+        {
+            if (!int.TryParse(User.Identity?.Name, out int id) || id <= 0)
+                return Unauthorized("No se pudo identificar al usuario.");
+
+            if (fotoPerfil == null || fotoPerfil.Length == 0)
+                return BadRequest("Tenés que seleccionar una imagen.");
+
+            if (fotoPerfil.Length > 2 * 1024 * 1024)
+                return BadRequest("La foto no puede superar los 2 MB.");
+
+            var tiposPermitidos = new Dictionary<string, string>
+            {
+                { "image/jpeg", ".jpg" },
+                { "image/png", ".png" },
+                { "image/webp", ".webp" }
+            };
+
+            if (!tiposPermitidos.TryGetValue(
+                    fotoPerfil.ContentType.ToLowerInvariant(),
+                    out string? extension))
+            {
+                return BadRequest("Solo se permiten imágenes JPG, PNG o WebP.");
+            }
+
+            var usuario = await context.Usuario.FindAsync(id);
+
+            if (usuario == null)
+                return NotFound("Usuario no encontrado.");
+
+            string carpeta = Path.Combine(
+                env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"),
+                "uploads",
+                "perfiles"
+            );
+
+            Directory.CreateDirectory(carpeta);
+
+            string nombreArchivo = $"{Guid.NewGuid():N}{extension}";
+            string rutaArchivo = Path.Combine(carpeta, nombreArchivo);
+            string? fotoAnterior = usuario.fotoPerfil;
+
+            try
+            {
+                using (var stream = new FileStream(
+                           rutaArchivo, FileMode.CreateNew))
+                {
+                    await fotoPerfil.CopyToAsync(stream);
+                }
+
+                usuario.fotoPerfil = $"/uploads/perfiles/{nombreArchivo}";
+                await context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                if (System.IO.File.Exists(rutaArchivo))
+                    System.IO.File.Delete(rutaArchivo);
+
+                return StatusCode(500,
+                    "No se pudo guardar la foto de perfil.");
+            }
+
+            // Eliminar la foto anterior solo después de guardar la nueva.
+            if (!string.IsNullOrWhiteSpace(fotoAnterior))
+            {
+                string nombreAnterior = Path.GetFileName(fotoAnterior);
+
+                if (!string.IsNullOrWhiteSpace(nombreAnterior))
+                {
+                    string rutaAnterior = Path.Combine(
+                        carpeta, nombreAnterior);
+
+                    if (System.IO.File.Exists(rutaAnterior) &&
+                        !string.Equals(
+                            rutaAnterior,
+                            rutaArchivo,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(rutaAnterior);
+                        }
+                        catch (IOException)
+                        {
+                            // La actualización ya se guardó en la base.
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            // La actualización ya se guardó en la base.
+                        }
+                    }
+                }
+            }
+
+            return Ok(new
+            {
+                mensaje = "Foto de perfil actualizada correctamente.",
+                fotoPerfil = usuario.fotoPerfil
+            });
+        }
+
 
     }
 }

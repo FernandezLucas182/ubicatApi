@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0fe0d9960c0115012072899c57263f4b64472b5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fe7de98208f72e02a3c6580f915c5035a437621")]
 [assembly: System.Reflection.AssemblyProductAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ubicatapi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
