@@ -153,16 +153,27 @@ namespace ubicatapi.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("fechaPerdida")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("foto")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<int>("idUsuario")
                         .HasColumnType("int");
 
+                    b.Property<double?>("latitudPerdida")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("longitudPerdida")
+                        .HasColumnType("double");
+
                     b.Property<string>("nombre")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<int>("radioBusquedaMetros")
+                        .HasColumnType("int");
 
                     b.HasKey("idMascota");
 
@@ -195,6 +206,12 @@ namespace ubicatapi.Migrations
                     b.Property<int>("idUsuario")
                         .HasColumnType("int");
 
+                    b.Property<double?>("latitudActual")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("longitudActual")
+                        .HasColumnType("double");
+
                     b.Property<string>("ubicacionActual")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -219,6 +236,9 @@ namespace ubicatapi.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("idReporte"));
 
+                    b.Property<string>("emailReportante")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("fecha")
                         .HasColumnType("datetime(6)");
 
@@ -231,7 +251,16 @@ namespace ubicatapi.Migrations
                     b.Property<int?>("idUsuarioReporta")
                         .HasColumnType("int");
 
+                    b.Property<double?>("latitud")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("longitud")
+                        .HasColumnType("double");
+
                     b.Property<string>("mensaje")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("telefonoReportante")
                         .HasColumnType("longtext");
 
                     b.Property<string>("tipoReporte")
@@ -268,6 +297,9 @@ namespace ubicatapi.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("especialidad")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("fotoPerfil")
                         .HasColumnType("longtext");
 
                     b.Property<string>("nombre")
@@ -321,6 +353,60 @@ namespace ubicatapi.Migrations
                     b.ToTable("validaciones", (string)null);
                 });
 
+            modelBuilder.Entity("UbicatApi.Models.Veterinario", b =>
+                {
+                    b.Property<int>("idVeterinario")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("idVeterinario"));
+
+                    b.Property<string>("documentacion")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("estadoVerificacion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime?>("fechaVerificacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("idUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<string>("jurisdiccion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("matricula")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("ofreceServiciosPagos")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("ofreceVoluntariado")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("idVeterinario");
+
+                    b.HasIndex("idUsuario")
+                        .IsUnique();
+
+                    b.HasIndex("jurisdiccion", "matricula")
+                        .IsUnique();
+
+                    b.ToTable("veterinario", (string)null);
+                });
+
             modelBuilder.Entity("UbicatApi.Models.Mascota", b =>
                 {
                     b.HasOne("UbicatApi.Models.Usuario", "Usuario")
@@ -354,10 +440,20 @@ namespace ubicatapi.Migrations
                     b.Navigation("Mascota");
                 });
 
+            modelBuilder.Entity("UbicatApi.Models.Veterinario", b =>
+                {
+                    b.HasOne("UbicatApi.Models.Usuario", "Usuario")
+                        .WithOne()
+                        .HasForeignKey("UbicatApi.Models.Veterinario", "idUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("UbicatApi.Models.Mascota", b =>
                 {
-                    b.Navigation("QR")
-                        .IsRequired();
+                    b.Navigation("QR");
                 });
 #pragma warning restore 612, 618
         }

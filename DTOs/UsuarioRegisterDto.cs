@@ -37,5 +37,20 @@ namespace UbicatApi.DTOs
         [StringLength(100, MinimumLength = 8,
             ErrorMessage = "La contraseña debe tener entre 8 y 100 caracteres.")]
         public string password { get; set; } = string.Empty;
+
+        // Datos requeridos únicamente para veterinarios
+        [StringLength(50)]
+        public string? matricula { get; set; }
+
+        [StringLength(100)]
+        public string? jurisdiccion { get; set; }
+
+        // Modalidades de atención veterinaria
+        public bool ofreceServiciosPagos { get; set; } = false;
+
+        public bool ofreceVoluntariado { get; set; } = false;
+
+        // Documentación profesional
+        public IFormFile? documentacion { get; set; }
     }
 }

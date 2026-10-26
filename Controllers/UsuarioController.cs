@@ -217,6 +217,39 @@ namespace UbicatApi.Controllers
 
                 if (u == null || u.password != hashed)
                     return BadRequest("Usuario o clave incorrecta");
+                // Impedir el ingreso de veterinarios no aprobados.
+                if (string.Equals(
+                        u.rol,
+                        "veterinario",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    var veterinario = await context.Veterinario
+                        .FirstOrDefaultAsync(v => v.idUsuario == u.idUsuario);
+
+                    if (veterinario == null)
+                    {
+                        return Unauthorized(
+                            "Tu documentación profesional no está registrada.");
+                    }
+
+                    if (!string.Equals(
+                            veterinario.estadoVerificacion,
+                            "aprobado",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (string.Equals(
+                                veterinario.estadoVerificacion,
+                                "rechazado",
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            return Unauthorized(
+                                "Tu documentación fue rechazada. Contactá al administrador para conocer cómo corregirla.");
+                        }
+
+                        return Unauthorized(
+                            "Tu documentación está pendiente de revisión. Podrás ingresar cuando sea aprobada.");
+                    }
+                }
 
                 var secreto = configuration["TokenAuthentication:SecretKey"];
                 var key = new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secreto));
@@ -260,6 +293,7 @@ namespace UbicatApi.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
         // ====================================
         // 6. REGISTRO DE USUARIO
         // ====================================
@@ -267,6 +301,9 @@ namespace UbicatApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromForm] UsuarioRegisterDto dto)
         {
+            string? rutaFotoFisica = null;
+            string? rutaDocumentacionFisica = null;
+
             try
             {
                 var rolesPermitidos = new[]
@@ -286,24 +323,40 @@ namespace UbicatApi.Controllers
 
                 dto.rol = dto.rol.Trim().ToLowerInvariant();
 
-                // validar email duplicado
-                var existe = await context.Usuario
-                    .FirstOrDefaultAsync(x => x.email == dto.email);
+                // Validaciones exclusivas para veterinarios
+                if (dto.rol == "veterinario")
+                {
+                    if (!dto.ofreceServiciosPagos && !dto.ofreceVoluntariado)
+                    {
+                        return BadRequest(
+                            "Debés seleccionar al menos una modalidad de atención.");
+                    }
+                    if (string.IsNullOrWhiteSpace(dto.matricula))
+                        return BadRequest("La matrícula profesional es obligatoria.");
 
-                if (existe != null)
+                    if (string.IsNullOrWhiteSpace(dto.jurisdiccion))
+                        return BadRequest("La jurisdicción es obligatoria.");
+
+                    if (dto.documentacion == null ||
+                        dto.documentacion.Length == 0)
+                    {
+                        return BadRequest(
+                            "Debés adjuntar la documentación profesional.");
+                    }
+
+                    if (dto.documentacion.Length > 5 * 1024 * 1024)
+                        return BadRequest(
+                            "La documentación no puede superar los 5 MB.");
+                }
+
+                // Validar correo duplicado
+                var existe = await context.Usuario
+                    .AnyAsync(x => x.email == dto.email);
+
+                if (existe)
                     return BadRequest("El correo ya está registrado.");
 
-
-                // hashear contraseña (idéntico a tu API anterior)
-                string hashedPass = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: dto.password,
-                    salt: System.Text.Encoding.ASCII.GetBytes(configuration["Salt"] ?? ""),
-                    prf: KeyDerivationPrf.HMACSHA1,
-                    iterationCount: 1000,
-                    numBytesRequested: 256 / 8));
-
-
-                // Validar la foto de perfil
+                // Validar foto de perfil
                 var foto = dto.fotoPerfil;
 
                 if (foto == null || foto.Length == 0)
@@ -312,66 +365,177 @@ namespace UbicatApi.Controllers
                 if (foto.Length > 2 * 1024 * 1024)
                     return BadRequest("La foto no puede superar los 2 MB.");
 
-                var tiposPermitidos = new Dictionary<string, string>
+                var tiposImagen = new Dictionary<string, string>
                 {
                     { "image/jpeg", ".jpg" },
                     { "image/png", ".png" },
                     { "image/webp", ".webp" }
                 };
 
-                if (!tiposPermitidos.TryGetValue(
+                if (!tiposImagen.TryGetValue(
                         foto.ContentType.ToLowerInvariant(),
-                        out string? extension))
+                        out string? extensionFoto))
                 {
-                    return BadRequest("Solo se permiten imágenes JPG, PNG o WebP.");
+                    return BadRequest(
+                        "Solo se permiten imágenes JPG, PNG o WebP para el perfil.");
                 }
 
-                // Guardar con un nombre generado por el servidor
-                string carpeta = Path.Combine(
-                    env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"),
-                    "uploads",
-                    "perfiles"
-                );
+                // Hashear contraseña
+                string hashedPass = Convert.ToBase64String(
+                    KeyDerivation.Pbkdf2(
+                        password: dto.password,
+                        salt: System.Text.Encoding.ASCII.GetBytes(
+                            configuration["Salt"] ?? ""),
+                        prf: KeyDerivationPrf.HMACSHA1,
+                        iterationCount: 1000,
+                        numBytesRequested: 256 / 8));
 
-                Directory.CreateDirectory(carpeta);
+                string raizWeb = env.WebRootPath ??
+                    Path.Combine(env.ContentRootPath, "wwwroot");
 
-                string nombreArchivo = $"{Guid.NewGuid():N}{extension}";
-                string rutaArchivo = Path.Combine(carpeta, nombreArchivo);
+                // Guardar foto de perfil
+                string carpetaPerfiles = Path.Combine(
+                    raizWeb, "uploads", "perfiles");
 
-                using (var stream = new FileStream(rutaArchivo, FileMode.CreateNew))
+                Directory.CreateDirectory(carpetaPerfiles);
+
+                string nombreFoto = $"{Guid.NewGuid():N}{extensionFoto}";
+                rutaFotoFisica = Path.Combine(carpetaPerfiles, nombreFoto);
+
+                await using (var stream = new FileStream(
+                    rutaFotoFisica, FileMode.CreateNew))
                 {
                     await foto.CopyToAsync(stream);
                 }
 
-                string rutaFoto = $"/uploads/perfiles/{nombreArchivo}";
+                string rutaFoto = $"/uploads/perfiles/{nombreFoto}";
 
-                // crear usuario
-                Usuario nuevo = new Usuario
+                // Guardar documentación profesional si es veterinario
+                string? rutaDocumentacion = null;
+
+                if (dto.rol == "veterinario")
                 {
-                    nombre = dto.nombre,
-                    apellido = dto.apellido,
-                    email = dto.email,
-                    telefono = dto.telefono,
-                    ubicacion = dto.ubicacion,
-                    rol = dto.rol,
-                    password = hashedPass,
-                    clasificacionPromedio = 0,
-                    fotoPerfil = rutaFoto
-                };
+                    var tiposDocumentacion = new Dictionary<string, string>
+                    {
+                        { "application/pdf", ".pdf" },
+                        { "image/jpeg", ".jpg" },
+                        { "image/png", ".png" },
+                        { "image/webp", ".webp" }
+                    };
 
-                context.Usuario.Add(nuevo);
-                await context.SaveChangesAsync();
+                    var documento = dto.documentacion!;
+
+                    if (!tiposDocumentacion.TryGetValue(
+                            documento.ContentType.ToLowerInvariant(),
+                            out string? extensionDocumento))
+                    {
+                        return BadRequest(
+                            "La documentación debe ser PDF, JPG, PNG o WebP.");
+                    }
+
+                    string carpetaVeterinarios = Path.Combine(
+                        raizWeb, "uploads", "veterinarios");
+
+                    Directory.CreateDirectory(carpetaVeterinarios);
+
+                    string nombreDocumento =
+                        $"{Guid.NewGuid():N}{extensionDocumento}";
+
+                    rutaDocumentacionFisica = Path.Combine(
+                        carpetaVeterinarios, nombreDocumento);
+
+                    await using (var stream = new FileStream(
+                        rutaDocumentacionFisica, FileMode.CreateNew))
+                    {
+                        await documento.CopyToAsync(stream);
+                    }
+
+                    rutaDocumentacion =
+                        $"/uploads/veterinarios/{nombreDocumento}";
+                }
+
+                // Guardar usuario y datos profesionales en una transacción
+                await using var transaccion =
+                    await context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    var nuevo = new Usuario
+                    {
+                        nombre = dto.nombre,
+                        apellido = dto.apellido,
+                        email = dto.email,
+                        telefono = dto.telefono,
+                        ubicacion = dto.ubicacion,
+                        rol = dto.rol,
+                        password = hashedPass,
+                        clasificacionPromedio = 0,
+                        fotoPerfil = rutaFoto
+                    };
+
+                    context.Usuario.Add(nuevo);
+                    await context.SaveChangesAsync();
+
+                    if (dto.rol == "veterinario")
+                    {
+                        var veterinario = new Veterinario
+                        {
+                            idUsuario = nuevo.idUsuario,
+                            matricula = dto.matricula!.Trim(),
+                            jurisdiccion = dto.jurisdiccion!.Trim(),
+                            documentacion = rutaDocumentacion,
+                            estadoVerificacion = "pendiente",
+                            ofreceServiciosPagos = dto.ofreceServiciosPagos,
+                            ofreceVoluntariado = dto.ofreceVoluntariado
+                        };
+
+                        context.Veterinario.Add(veterinario);
+                        await context.SaveChangesAsync();
+                    }
+
+                    await transaccion.CommitAsync();
+                }
+                catch
+                {
+                    await transaccion.RollbackAsync();
+                    throw;
+                }
 
                 return Ok(new
                 {
-                    mensaje = "Usuario registrado correctamente"
+                    mensaje = dto.rol == "veterinario"
+                        ? "Registro recibido. Tu matrícula y documentación están pendientes de verificación."
+                        : "Usuario registrado correctamente"
                 });
             }
-            catch (Exception ex)
+            catch (DbUpdateException)
             {
-                return BadRequest(ex.Message);
+                // Evitar dejar archivos huérfanos si falla la base de datos
+                EliminarArchivoSiExiste(rutaFotoFisica);
+                EliminarArchivoSiExiste(rutaDocumentacionFisica);
+
+                return BadRequest(
+                    "No se pudo completar el registro. Verificá los datos e intentá nuevamente.");
+            }
+            catch (Exception)
+            {
+                EliminarArchivoSiExiste(rutaFotoFisica);
+                EliminarArchivoSiExiste(rutaDocumentacionFisica);
+
+                return StatusCode(500,
+                    "Ocurrió un error al registrar el usuario.");
             }
         }
+
+        private static void EliminarArchivoSiExiste(string? ruta)
+        {
+            if (!string.IsNullOrWhiteSpace(ruta) &&
+                System.IO.File.Exists(ruta))
+            {
+                System.IO.File.Delete(ruta);
+            }
+        }
+
 
 
         // ====================================

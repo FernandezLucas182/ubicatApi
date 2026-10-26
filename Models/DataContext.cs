@@ -17,11 +17,13 @@ namespace UbicatApi.Models
         public DbSet<Comentarios> Comentarios { get; set; }
         public DbSet<Validaciones> Validaciones { get; set; }
         public DbSet<ReporteMascota> ReporteMascota { get; set; }
+        public DbSet<Veterinario> Veterinario { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
 
             // Relación QR 1:1 Mascota
             modelBuilder.Entity<QR>()
@@ -29,7 +31,7 @@ namespace UbicatApi.Models
                 .WithOne(m => m.QR)
                 .HasForeignKey<QR>(q => q.idMascota);
 
-            // ReporteMascota -> Mascota (muchos a 1)
+            // ReporteMascota -> Mascota
             modelBuilder.Entity<ReporteMascota>()
                 .ToTable("reporte_mascota")
                 .HasOne(r => r.Mascota)
@@ -37,7 +39,24 @@ namespace UbicatApi.Models
                 .HasForeignKey(r => r.idMascota)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Forzar nombres EXACTOS según MySQL
+            // Veterinario -> Usuario (relación 1:1)
+            modelBuilder.Entity<Veterinario>()
+                .ToTable("veterinario")
+                .HasOne(v => v.Usuario)
+                .WithOne()
+                .HasForeignKey<Veterinario>(v => v.idUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Veterinario>()
+                .HasIndex(v => v.idUsuario)
+                .IsUnique();
+
+            // Matrícula única dentro de cada jurisdicción
+            modelBuilder.Entity<Veterinario>()
+                .HasIndex(v => new { v.jurisdiccion, v.matricula })
+                .IsUnique();
+
+            // Forzar nombres exactos según MySQL
             modelBuilder.Entity<Usuario>().ToTable("usuario");
             modelBuilder.Entity<Mascota>().ToTable("mascota");
             modelBuilder.Entity<QR>().ToTable("qr");

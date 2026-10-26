@@ -102,15 +102,37 @@ namespace UbicatApi.Controllers
                 var mascota = await context.Mascota.FindAsync(qr.idMascota);
                 if (mascota == null) return NotFound("Mascota no encontrada.");
 
-                // SUBIR FOTO
+                // VALIDAR COORDENADAS ANTES DE SUBIR LA FOTO
+                if (dto.latitud.HasValue != dto.longitud.HasValue)
+                    return BadRequest("Debés enviar latitud y longitud juntas.");
+
+                if (dto.latitud.HasValue != dto.longitud.HasValue)
+                {
+                    return BadRequest("Debés enviar latitud y longitud juntas.");
+                }
+
+                if (dto.latitud.HasValue &&
+                    (dto.latitud.Value < -90 || dto.latitud.Value > 90 ||
+                     dto.longitud.Value < -180 || dto.longitud.Value > 180))
+                {
+                    return BadRequest("Las coordenadas GPS no son válidas.");
+                }
+                // SUBIR FOTO DESPUÉS DE VALIDAR
                 string? fotoUrl = null;
 
                 if (dto.foto != null)
                     fotoUrl = await storage.GuardarImagen(dto.foto);
-
                 // ACTUALIZAR QR
                 qr.ubicacionActual = dto.ubicacion;
                 qr.fechaUltimoEscaneo = DateTime.Now;
+
+                // No borrar las coordenadas anteriores si el reporte
+                // no incluye una nueva ubicación GPS.
+                if (dto.latitud.HasValue && dto.longitud.HasValue)
+                {
+                    qr.latitudActual = dto.latitud.Value;
+                    qr.longitudActual = dto.longitud.Value;
+                }
 
                 // GUARDAR HISTORIAL
                 context.ReporteMascota.Add(new ReporteMascota
@@ -123,7 +145,9 @@ namespace UbicatApi.Controllers
                     fecha = DateTime.Now,
                     foto = fotoUrl,
                     emailReportante = dto.emailReportante,
-                    telefonoReportante = dto.telefonoReportante
+                    telefonoReportante = dto.telefonoReportante,
+                    latitud = dto.latitud,
+                    longitud = dto.longitud
                 });
 
                 await context.SaveChangesAsync();
@@ -229,11 +253,14 @@ namespace UbicatApi.Controllers
             var historial = await context.ReporteMascota
                 .Where(r => r.idMascota == idMascota)
                 .OrderByDescending(r => r.fecha)
+
                 .Select(r => new
                 {
                     r.idReporte,
                     r.tipoReporte,
                     r.ubicacion,
+                    r.latitud,
+                    r.longitud,
                     r.mensaje,
                     r.fecha,
                     r.foto
@@ -241,6 +268,30 @@ namespace UbicatApi.Controllers
                 .ToListAsync();
 
             return Ok(historial);
+        }
+
+        [HttpGet("avistamientos-con-ubicacion")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ObtenerAvistamientosConUbicacion()
+        {
+            var avistamientos = await context.ReporteMascota
+                .Where(r => r.tipoReporte == "vista"
+                    && r.latitud != null
+                    && r.longitud != null)
+                .Select(r => new
+                {
+                    r.idReporte,
+                    r.idMascota,
+                    r.ubicacion,
+                    r.latitud,
+                    r.longitud,
+                    r.mensaje,
+                    r.fecha,
+                    r.foto
+                })
+                .ToListAsync();
+
+            return Ok(avistamientos);
         }
     }
 }

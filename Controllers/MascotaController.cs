@@ -318,6 +318,157 @@ namespace UbicatApi.Controllers
             }
         }
 
+
+        // ============================================================
+        // PUT - Cambiar solamente el estado de una mascota
+        // ============================================================
+
+        [Authorize]
+        [HttpPut("estado/{id}")]
+        public async Task<IActionResult> CambiarEstado(
+            int id,
+            [FromBody] CambiarEstadoMascotaDto dto)
+        {
+            int idUsuario = int.Parse(User.Identity?.Name ?? "0");
+
+            var mascota = await context.Mascota.FirstOrDefaultAsync(x =>
+                x.idMascota == id &&
+                x.idUsuario == idUsuario);
+
+            if (mascota == null)
+                return NotFound("Mascota no encontrada.");
+
+            if (dto == null ||
+                (dto.estado != "perdida" && dto.estado != "en casa"))
+            {
+                return BadRequest("El estado debe ser 'perdida' o 'en casa'.");
+            }
+
+            if (dto.estado == "perdida")
+            {
+                // Validar coordenadas: deben enviarse juntas
+                if (dto.latitudPerdida.HasValue != dto.longitudPerdida.HasValue)
+                {
+                    return BadRequest(
+                        "Debés enviar latitud y longitud juntas.");
+                }
+
+                if (dto.latitudPerdida.HasValue &&
+                    (dto.latitudPerdida < -90 || dto.latitudPerdida > 90))
+                {
+                    return BadRequest("La latitud no es válida.");
+                }
+
+                if (dto.longitudPerdida.HasValue &&
+                    (dto.longitudPerdida < -180 || dto.longitudPerdida > 180))
+                {
+                    return BadRequest("La longitud no es válida.");
+                }
+
+                if (dto.radioBusquedaMetros.HasValue &&
+                    (dto.radioBusquedaMetros < 100 ||
+                     dto.radioBusquedaMetros > 50000))
+                {
+                    return BadRequest(
+                        "El radio debe estar entre 100 y 50000 metros.");
+                }
+
+                // Registrar la fecha solo al iniciar una nueva pérdida
+                if (mascota.estado != "perdida")
+                {
+                    mascota.fechaPerdida = DateTime.UtcNow;
+                }
+
+                if (dto.latitudPerdida.HasValue)
+                    mascota.latitudPerdida = dto.latitudPerdida;
+
+                if (dto.longitudPerdida.HasValue)
+                    mascota.longitudPerdida = dto.longitudPerdida;
+
+                if (dto.radioBusquedaMetros.HasValue)
+                    mascota.radioBusquedaMetros = dto.radioBusquedaMetros.Value;
+            }
+            else
+            {
+                // Al regresar a casa, cerrar la alerta activa
+                mascota.fechaPerdida = null;
+            }
+
+            mascota.estado = dto.estado;
+
+            await context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Estado actualizado correctamente",
+                estado = mascota.estado,
+                latitudPerdida = mascota.latitudPerdida,
+                longitudPerdida = mascota.longitudPerdida,
+                radioBusquedaMetros = mascota.radioBusquedaMetros,
+                fechaPerdida = mascota.fechaPerdida
+            });
+        }
+
+
+
+
+        [Authorize]
+        [HttpGet("perdidas-con-ubicacion")]
+        public async Task<IActionResult> ObtenerMascotasPerdidas()
+        {
+            var mascotas = await context.Mascota
+                .Include(m => m.QR)
+                .Where(m => m.estado == "perdida")
+                .ToListAsync();
+
+            var resultado = new List<object>();
+
+            foreach (var mascota in mascotas)
+            {
+                var avistamiento = await context.ReporteMascota
+                    .Where(r => r.idMascota == mascota.idMascota
+                        && r.tipoReporte == "vista"
+                        && r.latitud != null
+                        && r.longitud != null)
+                    .OrderByDescending(r => r.fecha)
+                    .FirstOrDefaultAsync();
+
+                // Ubicación del último avistamiento
+                double? latitud = avistamiento?.latitud
+                    ?? mascota.QR?.latitudActual;
+
+                double? longitud = avistamiento?.longitud
+                    ?? mascota.QR?.longitudActual;
+
+                resultado.Add(new
+                {
+                    mascota.idMascota,
+                    mascota.nombre,
+                    mascota.especie,
+                    mascota.edad,
+                    mascota.foto,
+                    mascota.estado,
+
+                    // Último avistamiento
+                    ubicacion = avistamiento?.ubicacion
+                        ?? mascota.QR?.ubicacionActual,
+                    latitud,
+                    longitud,
+                    fechaAvistamiento = avistamiento?.fecha,
+
+                    // Datos iniciales de la pérdida
+                    mascota.latitudPerdida,
+                    mascota.longitudPerdida,
+                    mascota.radioBusquedaMetros,
+                    mascota.fechaPerdida
+                });
+            }
+
+            return Ok(resultado);
+        }
+
+
+
         // ============================================================
         // DELETE - Eliminar Mascota
         // ============================================================

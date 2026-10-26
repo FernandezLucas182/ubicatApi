@@ -4,9 +4,12 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 using UbicatApi.Models;
 using UbicatApi.Services;
+using UbicatApi.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
@@ -63,6 +66,7 @@ builder.Services.AddDbContext<DataContext>(options =>
 builder.Services.AddScoped<EmailService>();          // Servicio de envío de emails
 builder.Services.AddScoped<LocalFileService>();
 builder.Services.AddScoped<LocalStorageService>();
+builder.Services.AddScoped<VerificacionVeterinarioService>();
 
 
 

@@ -52,6 +52,7 @@ appsettings.*.json
 *.svclog
 
 
+
 # Archivos generados por la compilación .NET
 bin/
 obj/

@@ -1,3 +1,4 @@
+
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -24,5 +25,15 @@ namespace UbicatApi.Models
         public string? foto { get; set; }
 
         public QR? QR { get; set; }
+
+        // Datos iniciales de la pérdida
+        public double? latitudPerdida { get; set; }
+        public double? longitudPerdida { get; set; }
+
+        // Radio de búsqueda en metros (500 m por defecto)
+        public int radioBusquedaMetros { get; set; } = 500;
+
+        // Fecha en que se registró la pérdida
+        public DateTime? fechaPerdida { get; set; }
     }
 }
