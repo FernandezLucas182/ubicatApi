@@ -1,12 +1,16 @@
 
-public class CambiarEstadoMascotaDto
+namespace UbicatApi.DTOs
 {
-    public string estado { get; set; } = string.Empty;
+    public class CambiarEstadoMascotaDto
+    {
+        public string estado { get; set; } = string.Empty;
 
-    // Ubicación donde se perdió la mascota
-    public double? latitudPerdida { get; set; }
-    public double? longitudPerdida { get; set; }
+        public double? latitudPerdida { get; set; }
+        public double? longitudPerdida { get; set; }
+        public int? radioBusquedaMetros { get; set; }
 
-    // Radio de búsqueda en metros
-    public int? radioBusquedaMetros { get; set; }
+        public string? telefonoContacto { get; set; }
+        public string? emailContacto { get; set; }
+        public string? mensaje { get; set; }
+    }
 }

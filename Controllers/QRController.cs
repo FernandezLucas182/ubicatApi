@@ -4,6 +4,7 @@ using UbicatApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using UbicatApi.DTOs;
 using UbicatApi.Services;
+using System.Globalization;
 
 namespace UbicatApi.Controllers
 {
@@ -102,24 +103,55 @@ namespace UbicatApi.Controllers
                 var mascota = await context.Mascota.FindAsync(qr.idMascota);
                 if (mascota == null) return NotFound("Mascota no encontrada.");
 
-                // VALIDAR COORDENADAS ANTES DE SUBIR LA FOTO
-                if (dto.latitud.HasValue != dto.longitud.HasValue)
-                    return BadRequest("Debés enviar latitud y longitud juntas.");
 
-                if (dto.latitud.HasValue != dto.longitud.HasValue)
+                // VALIDAR COORDENADAS ANTES DE SUBIR LA FOTO
+                double? latitud = null;
+                double? longitud = null;
+
+                if (!string.IsNullOrWhiteSpace(dto.latitud))
+                {
+                    if (!double.TryParse(
+                        dto.latitud,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double lat))
+                    {
+                        return BadRequest("La latitud no tiene un formato válido.");
+                    }
+
+                    latitud = lat;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.longitud))
+                {
+                    if (!double.TryParse(
+                        dto.longitud,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double lon))
+                    {
+                        return BadRequest("La longitud no tiene un formato válido.");
+                    }
+
+                    longitud = lon;
+                }
+
+                if (latitud.HasValue != longitud.HasValue)
                 {
                     return BadRequest("Debés enviar latitud y longitud juntas.");
                 }
 
-                if (dto.latitud.HasValue &&
-                    (dto.latitud.Value < -90 || dto.latitud.Value > 90 ||
-                     dto.longitud.Value < -180 || dto.longitud.Value > 180))
+                if (latitud.HasValue &&
+                    (latitud.Value < -90 || latitud.Value > 90 ||
+                     longitud!.Value < -180 || longitud.Value > 180))
                 {
                     return BadRequest("Las coordenadas GPS no son válidas.");
                 }
+
                 // SUBIR FOTO DESPUÉS DE VALIDAR
                 string? fotoUrl = null;
 
+                
                 if (dto.foto != null)
                     fotoUrl = await storage.GuardarImagen(dto.foto);
                 // ACTUALIZAR QR
@@ -128,10 +160,10 @@ namespace UbicatApi.Controllers
 
                 // No borrar las coordenadas anteriores si el reporte
                 // no incluye una nueva ubicación GPS.
-                if (dto.latitud.HasValue && dto.longitud.HasValue)
+                if (latitud.HasValue && longitud.HasValue)
                 {
-                    qr.latitudActual = dto.latitud.Value;
-                    qr.longitudActual = dto.longitud.Value;
+                    qr.latitudActual = latitud.Value;
+                    qr.longitudActual = longitud.Value;
                 }
 
                 // GUARDAR HISTORIAL
@@ -146,8 +178,8 @@ namespace UbicatApi.Controllers
                     foto = fotoUrl,
                     emailReportante = dto.emailReportante,
                     telefonoReportante = dto.telefonoReportante,
-                    latitud = dto.latitud,
-                    longitud = dto.longitud
+                    latitud = latitud,
+                    longitud = longitud
                 });
 
                 await context.SaveChangesAsync();

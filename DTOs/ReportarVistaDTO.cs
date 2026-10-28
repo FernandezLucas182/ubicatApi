@@ -15,8 +15,8 @@ namespace UbicatApi.DTOs
         // Foto opcional
         public IFormFile? foto { get; set; }
 
-        // Coordenadas GPS opcionales
-        public double? latitud { get; set; }
-        public double? longitud { get; set; }
+        /// Coordenadas GPS opcionales
+        public string? latitud { get; set; }
+        public string? longitud { get; set; }
     }
 }

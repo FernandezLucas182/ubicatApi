@@ -337,6 +337,7 @@ namespace UbicatApi.Controllers
 
             if (mascota == null)
                 return NotFound("Mascota no encontrada.");
+            bool nuevaPerdida = mascota.estado != "perdida";
 
             if (dto == null ||
                 (dto.estado != "perdida" && dto.estado != "en casa"))
@@ -392,6 +393,32 @@ namespace UbicatApi.Controllers
             {
                 // Al regresar a casa, cerrar la alerta activa
                 mascota.fechaPerdida = null;
+            }
+
+            if (dto.estado == "perdida")
+            {
+                var reportePerdida = await context.ReporteMascota
+                    .Where(r => r.idMascota == mascota.idMascota
+                        && r.tipoReporte == "perdida")
+                    .OrderByDescending(r => r.fecha)
+                    .FirstOrDefaultAsync();
+
+                if (reportePerdida == null || nuevaPerdida)
+                {
+                    reportePerdida = new ReporteMascota
+                    {
+                        idMascota = mascota.idMascota,
+                        idUsuarioReporta = idUsuario,
+                        tipoReporte = "perdida",
+                        fecha = DateTime.UtcNow
+                    };
+
+                    context.ReporteMascota.Add(reportePerdida);
+                }
+
+                reportePerdida.mensaje = dto.mensaje;
+                reportePerdida.telefonoReportante = dto.telefonoContacto;
+                reportePerdida.emailReportante = dto.emailContacto;
             }
 
             mascota.estado = dto.estado;
